@@ -62,7 +62,7 @@ int main()
   //generar valores para las matrices
   gen_data(A, local_n*n);
   
-  mat_vect_mult(A, x, y, n, iters);
+  mat_vect_mult(A, x, y, local_n, iters);
 
   print_vector("y", y, local_n);
   free(A);
