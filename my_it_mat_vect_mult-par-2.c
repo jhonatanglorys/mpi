@@ -12,7 +12,6 @@
 #include <mpi.h>
 #include <assert.h>
 
-
 /* función para generar <size> cantidad de datos aleatorios */
 void gen_data(double * array, int size);
 /* función para multiplicar iterativamente un matriz 
@@ -30,18 +29,17 @@ int main()
   long seed;
   int comm_sz;
   int rank;
-  double local_n;
-  int start, end;
 
+    double local_n;
   MPI_Init(NULL, NULL);
 
   // SPMD: rank , comm_sz
   MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  printf("Número de procesos %d\n", comm_sz);
 
-    if(rank==0){
-        // Obtener las dimensiones
+
+  if(rank == 0){
+    // Obtener las dimensiones
   printf("Ingrese la dimensión n:\n");
   scanf("%d", &n);
   printf("Ingrese el número de iteraciones:\n");
@@ -49,35 +47,29 @@ int main()
   printf("Ingrese semilla para el generador de números aleatorios:\n");
   scanf("%ld", &seed);
   srand(seed);
-    }
-  
-  MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
-  MPI_Bcast(&iters, 1, MPI_INT, 0, MPI_COMM_WORLD);
-  MPI_Bcast(&seed, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
+  x = malloc(sizeof(double) * n);
+  gen_data(x, n);
+  }
     assert(n % comm_sz == 0);
     local_n = n % comm_sz;
-  // la matriz A tendrá una representación unidimensional
-  A = malloc(sizeof(double) * n * n);
-  x = malloc(sizeof(double) * n);
-  y = malloc(sizeof(double) * n);
+    MPI_Bcast(&x, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
+
+  // la matriz A tendrá una representación unidimensional
+  A = malloc(sizeof(double) * local_n * n);
+  y = malloc(sizeof(double) * local_n);
 
   //generar valores para las matrices
-  gen_data(A, n*n);
-  gen_data(x, n);
+  gen_data(A, local_n*n);
+  
+  mat_vect_mult(A, x, y, local_n, iters);
 
-    start = rank*local_n;
-    end = rank*(local_n+1);
-  mat_vect_mult(A, x, y, n, iters);
-
-  print_vector("y", y, n);
+  print_vector("y", y, local_n);
   free(A);
   free(x);
   free(y);
   
-
-
   MPI_Finalize();
   return 0;
 }
