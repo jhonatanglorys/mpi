@@ -12,6 +12,8 @@
 #include <mpi.h>
 #include <assert.h>
 
+const double MAXIMO = 25000;
+
 
 /* función para generar <size> cantidad de datos aleatorios */
 void gen_data(double * array, int size);
@@ -19,19 +21,19 @@ void gen_data(double * array, int size);
  * <m x n> por un vector de tam <n> */
 void mat_vect_mult(double* A, double* x, double* y, int n, int it);
 /* función para imprimir un vector llamado <name> de tamaño <m>*/
-void print_vector(char* name, double*  y, int m);
+void print_vector(char* name, int rank, double*  z, int m);
 
 int main()
 {
   double* A = NULL;
   double* x = NULL;
   double* y = NULL;
-  int n, iters;
+  int n=0, iters;
   long seed;
   int comm_sz;
   int rank;
   double local_n;
-  int start, end;
+  
 
   MPI_Init(NULL, NULL);
 
@@ -49,29 +51,49 @@ int main()
   printf("Ingrese semilla para el generador de números aleatorios:\n");
   scanf("%ld", &seed);
   srand(seed);
-    }
   
+}
+  
+
+  
+  // Broadcast
+
   MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
   MPI_Bcast(&iters, 1, MPI_INT, 0, MPI_COMM_WORLD);
-  MPI_Bcast(&seed, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(&seed, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+
+
+  x = malloc(sizeof(double) * n);
+  gen_data(x, n);
+  A = malloc(sizeof(double) * n * n);
+  gen_data(A, n*n);
+  y = malloc(sizeof(double) * n);
+
+    /*MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Bcast(x, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(A, n*n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(y, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	  MPI_Barrier(MPI_COMM_WORLD);*/
+
 
     assert(n % comm_sz == 0);
     local_n = n % comm_sz;
   // la matriz A tendrá una representación unidimensional
-  A = malloc(sizeof(double) * n * n);
-  x = malloc(sizeof(double) * n);
-  y = malloc(sizeof(double) * n);
+  
 
+  
 
   //generar valores para las matrices
-  gen_data(A, n*n);
-  gen_data(x, n);
+  
+  
 
-    start = rank*local_n;
-    end = rank*(local_n+1);
+    
   mat_vect_mult(A, x, y, n, iters);
+   
+    print_vector("x",rank,  x, n);
 
-  print_vector("y", y, n);
+    print_vector("y", rank,y, n);
+  
   free(A);
   free(x);
   free(y);
@@ -102,10 +124,10 @@ void mat_vect_mult(double* A, double* x, double* y, int n, int it){
   }
 }
 
-void print_vector(char* name, double*  y, int m) {
+void print_vector(char* name,int rank, double*  z, int m) {
    int i;
-   printf("\nVector %s\n", name);
+   printf("\nProcess %d Vector %s\n",rank, name);
    for (i = 0; i < m; i++)
-      printf("%f ", y[i]);
+      printf("%f ", z[i]);
    printf("\n");
 }
