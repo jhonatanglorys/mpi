@@ -19,7 +19,7 @@ const double MAXIMO = 25000;
 void gen_data(double * array, int size);
 /* función para multiplicar iterativamente un matriz 
  * <m x n> por un vector de tam <n> */
-void mat_vect_mult(double* A, double* x, double* y, int n, int it);
+void mat_vect_mult(double* A, double* x, double* y, int n, int it, int inicio, int final);
 /* función para imprimir un vector llamado <name> de tamaño <m>*/
 void print_vector(char* name, int rank, double*  z, int m);
 
@@ -28,12 +28,14 @@ int main()
   double* A = NULL;
   double* x = NULL;
   double* y = NULL;
+  double* y_gather = NULL;
   int n=0, iters;
   long seed;
   int comm_sz;
   int rank;
-  double local_n;
-  
+  int inicio;
+  int final;
+  int segmentos;
 
   MPI_Init(NULL, NULL);
 
@@ -77,7 +79,7 @@ int main()
 
 
     assert(n % comm_sz == 0);
-    local_n = n % comm_sz;
+    // local_n = n % comm_sz;
   // la matriz A tendrá una representación unidimensional
   
 
@@ -86,14 +88,23 @@ int main()
   //generar valores para las matrices
   
   
-
+  inicio = rank*n;
+  segmentos = (int)n/comm_sz;
+  final=(rank+1)*n-1;
     
-  mat_vect_mult(A, x, y, n, iters);
-   
-    print_vector("x",rank,  x, n);
+  printf("Proceso %d, inicio %d, final %d\n",rank, inicio, final);
 
-    print_vector("y", rank,y, n);
+  mat_vect_mult(A, x, y, n, iters, inicio, final);
   
+
+
+  y_gather = malloc(sizeof(double) * n);
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Allgather(&y, segmentos, MPI_DOUBLE, y_gather, n, MPI_DOUBLE, MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  print_vector("y", rank,y, n);
+
   free(A);
   free(x);
   free(y);
@@ -110,14 +121,15 @@ void gen_data(double * array, int size){
     array[i] = (double) rand() / (double) RAND_MAX;
 }
 
-void mat_vect_mult(double* A, double* x, double* y, int n, int it){
+void mat_vect_mult(double* A, double* x, double* y, int n, int it, int inicio, int fin){
   int h, i, j;
-  for(h = 0; h < it; h++){
+  for(h = 0; h < it; h++){  
     for(i = 0; i < n; i++){
       y[i] = 0.0;
-      for(j = 0; j < n; j++)
-	y[i] += A[i*n+j] * x[j];
-    }
+      for(j = 0; j < n; j++){
+	        y[i] += A[i*n+j] * x[j];
+        }  
+      }
     // x <= y
     for(i = 0; i < n; i++)
       x[i] = y[i];
@@ -128,6 +140,6 @@ void print_vector(char* name,int rank, double*  z, int m) {
    int i;
    printf("\nProcess %d Vector %s\n",rank, name);
    for (i = 0; i < m; i++)
-      printf("%f ", z[i]);
+      printf("%f\n", z[i]);
    printf("\n");
 }
