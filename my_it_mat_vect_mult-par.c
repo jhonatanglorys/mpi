@@ -75,6 +75,7 @@ int main()
     MPI_Bcast(x,n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(y,n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
+    MPI_Barrier(MPI_COMM_WORLD);
     mat_vect_mult(fila, x, subtotal, n, iters);
 
     MPI_Gather(&subtotal, 1, MPI_DOUBLE, y, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
