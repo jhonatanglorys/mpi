@@ -69,7 +69,7 @@ int main()
     fila = malloc(sizeof(double) * n);
     subtotal = malloc(sizeof(double) * n);
     
-    datos = (int)n/comm_sz;
+    datos = n*comm_sz;
 
     MPI_Scatter(A, datos, MPI_DOUBLE, fila, datos, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(x,n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
