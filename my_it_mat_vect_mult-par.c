@@ -19,7 +19,7 @@ void gen_data(double * array, int size);
  * <m x n> por un vector de tam <n> */
 void mat_vect_mult(double* A, double* x, double* y, int n, int it);
 /* función para imprimir un vector llamado <name> de tamaño <m>*/
-void print_vector(char* name, double*  z, int m);
+void print_vector(char* name, int rank, double*  z, int m);
 
 int main()
 {
@@ -28,6 +28,7 @@ int main()
   double* y = NULL;
   double* fila=NULL;
   double* subtotal=NULL;
+  int datos;
   int n, iters;
   long seed;
   int comm_sz;
@@ -71,7 +72,9 @@ int main()
 
     assert(n % comm_sz == 0);
     
-    MPI_Scatter(A, comm_sz, MPI_DOUBLE, fila, comm_sz, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    datos = (int)n/comm_sz;
+
+    MPI_Scatter(A, datos, MPI_DOUBLE, fila, datos, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(x,n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(y,n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
@@ -80,7 +83,7 @@ int main()
 
     MPI_Gather(&subtotal, 1, MPI_DOUBLE, y, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-    print_vector("y", y, n);
+    print_vector("y", rank,y, n);
     free(A);
     free(x);
     free(y);
@@ -109,10 +112,10 @@ void mat_vect_mult(double* A, double* x, double* y, int n, int it){
   }
 }
 
-void print_vector(char* name, double*  z, int m) {
+void print_vector(char* name,int rank, double*  z, int m) {
    int i;
-   printf("\nVector %s\n", name);
+   printf("\nProcess %d Vector %s\n",rank, name);
    for (i = 0; i < m; i++)
-      printf("%f ", z[i]);
+      printf("%f\n", z[i]);
    printf("\n");
 }
