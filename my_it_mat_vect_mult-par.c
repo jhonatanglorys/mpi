@@ -27,6 +27,7 @@ int main()
   double* x = NULL;
   double* y = NULL;
   double* fila=NULL;
+  double* subtotal=NULL;
   int n, iters;
   long seed;
   int comm_sz;
@@ -63,21 +64,28 @@ int main()
 
   
 
-  fila = malloc(sizeof(double) * n);
+    fila = malloc(sizeof(double) * n);
+    subtotal = malloc(sizeof(double) * n);
+    
 
 
+    assert(n % comm_sz == 0);
+    
     MPI_Scatter(A, comm_sz, MPI_DOUBLE, fila, comm_sz, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(x,n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(y,n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-  mat_vect_mult(A, x, y, n, iters);
 
-  print_vector("y", y, n);
-  free(A);
-  free(x);
-  free(y);
+    mat_vect_mult(fila, x, subtotal, n, iters);
+
+    MPI_Gather(&subtotal, 1, MPI_DOUBLE, y, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    print_vector("y", y, n);
+    free(A);
+    free(x);
+    free(y);
   
-  MPI_Finalize();
-  return 0;
+    MPI_Finalize();
+    return 0;
 }
 
 void gen_data(double * array, int size){
