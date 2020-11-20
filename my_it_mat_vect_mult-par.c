@@ -68,14 +68,14 @@ int main()
     // Verifico que la cantidad de hilos y la dimensión de la matriz sean compatibles
     assert(n % comm_sz == 0);
 
-    // Creo un vector con cada fila de la matriz que será luego repartida entre los procesos
-    fila = malloc(sizeof(double) * n);
+    // Creo un vector con cada segmento de la matriz que será luego repartida entre los procesos
+    fila = malloc(sizeof(double) * (n*(n/comm_sz)));
 
     // Creo un vector que almacenará los valores locales de Y en cada proceso
     subtotal = malloc(sizeof(double) * n);
     
     // Calculo cuantos valores de la matriz serán repartidos entre cada proceso
-    datos = n*comm_sz;
+    datos = n*(n/comm_sz);
 
     // Reparto A entre todos los procesos
     MPI_Scatter(A, datos, MPI_DOUBLE, fila, datos, MPI_DOUBLE, 0, MPI_COMM_WORLD);
