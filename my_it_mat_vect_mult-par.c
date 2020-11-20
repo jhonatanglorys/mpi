@@ -17,7 +17,7 @@
 void gen_data(double * array, int size);
 /* función para multiplicar iterativamente un matriz 
  * <m x n> por un vector de tam <n> */
-void mat_vect_mult(double* A, double* x, double* y, int n, int it);
+void mat_vect_mult(double* A, double* x, double* y, int n, int it, int segmentos);
 /* función para imprimir un vector llamado <name> de tamaño <m>*/
 void print_vector(char* name, int rank, double*  z, int m);
 
@@ -33,6 +33,7 @@ int main()
   long seed;
   int comm_sz;
   int rank;
+  int segmentos;
 
 
       // Inicio MPI
@@ -64,18 +65,22 @@ int main()
     gen_data(x, n);
   }
 
-    
+    MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&iters, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&seed, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+
     // Verifico que la cantidad de hilos y la dimensión de la matriz sean compatibles
     assert(n % comm_sz == 0);
+    
 
     // Creo un vector con cada segmento de la matriz que será luego repartida entre los procesos
-    fila = malloc(sizeof(double) * (n*(n/comm_sz)));
+    fila = malloc(sizeof(double) * (n*((int)n/comm_sz)));
 
     // Creo un vector que almacenará los valores locales de Y en cada proceso
-    subtotal = malloc(sizeof(double) * n);
+    subtotal = malloc(sizeof(double) * ((int)(n/comm_sz)));
     
     // Calculo cuantos valores de la matriz serán repartidos entre cada proceso
-    datos = n*(n/comm_sz);
+    datos = n*((int)n/comm_sz);
 
     // Reparto A entre todos los procesos
     MPI_Scatter(A, datos, MPI_DOUBLE, fila, datos, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -86,10 +91,14 @@ int main()
 
     // Espero a que todos los procesos lleguen para calcular sus respectivos valores
     MPI_Barrier(MPI_COMM_WORLD);
-    mat_vect_mult(fila, x, subtotal, n, iters);
+
+    // cantidad de filas de A que cada proceso usa
+    segmentos = n/comm_sz;
+
+    mat_vect_mult(fila, x, subtotal, n, iters, segmentos);
 
     // Recopilo los valores locales de Y calculados en cada proceso
-    MPI_Gather(subtotal, 1, MPI_DOUBLE, y, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Gather(subtotal, segmentos, MPI_DOUBLE, y, segmentos, MPI_DOUBLE, 0, MPI_COMM_WORLD);
    
     // Imprimo los valores de A que pertenecen a cada proceso
     print_vector("fila", rank,fila, datos);
@@ -112,18 +121,20 @@ void gen_data(double * array, int size){
     array[i] = (double) rand() / (double) RAND_MAX;
 }
 
-void mat_vect_mult(double* A, double* x, double* y, int n, int it){
+void mat_vect_mult(double* A, double* x, double* y, int n, int it, int segmentos){
   int h, i, j;
   for(h = 0; h < it; h++){
-    for(i = 0; i < n; i++){
+    for(i = 0; i < segmentos; i++){
       y[i] = 0.0;
       for(j = 0; j < n; j++)
 	y[i] += A[i*n+j] * x[j];
     }
     // x <= y
     for(i = 0; i < n; i++)
-      x[i] = y[i];
+      /*x[i] = y[i];*/
+      MPI_Allgather(&y[i], 1, MPI_DOUBLE, &x[i], 1, MPI_DOUBLE, MPI_COMM_WORLD);
   }
+  
 }
 
 void print_vector(char* name,int rank, double*  z, int m) {
