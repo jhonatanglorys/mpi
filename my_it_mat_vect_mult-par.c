@@ -80,7 +80,7 @@ int main()
     subtotal = malloc(sizeof(double) * ((int)(n/comm_sz)));
     
     // Calculo cuantos valores de la matriz serán repartidos entre cada proceso
-    datos = n*((int)n/comm_sz);
+    datos = n*((int)(n/comm_sz));
 
     // Reparto A entre todos los procesos
     MPI_Scatter(A, datos, MPI_DOUBLE, fila, datos, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -89,14 +89,12 @@ int main()
     MPI_Bcast(x,n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(y,n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
+    // cantidad de filas de A que cada proceso usa
+    segmentos = (int)n/comm_sz;
+ 
     // Espero a que todos los procesos lleguen para calcular sus respectivos valores
     MPI_Barrier(MPI_COMM_WORLD);
-
-    // cantidad de filas de A que cada proceso usa
-    segmentos = n/comm_sz;
-
     mat_vect_mult(fila, x, subtotal, n, iters, segmentos);
-
     // Recopilo los valores locales de Y calculados en cada proceso
     MPI_Gather(subtotal, segmentos, MPI_DOUBLE, y, segmentos, MPI_DOUBLE, 0, MPI_COMM_WORLD);
    
