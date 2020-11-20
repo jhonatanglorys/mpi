@@ -128,11 +128,11 @@ void mat_vect_mult(double* A, double* x, double* y, int n, int it, int segmentos
 	y[i] += A[i*n+j] * x[j];
     }
     // x <= y
-    for(i = 0; i < n; i++)
+    for(i = 0; i < segmentos; i++)
       /*x[i] = y[i];*/
       MPI_Allgather(&y[i], 1, MPI_DOUBLE, &x[i], 1, MPI_DOUBLE, MPI_COMM_WORLD);
   }
-  
+  /*MPI_Allgather(y, segmentos, MPI_DOUBLE, x, segmentos, MPI_DOUBLE, MPI_COMM_WORLD);*/
 }
 
 void print_vector(char* name,int rank, double*  z, int m) {
