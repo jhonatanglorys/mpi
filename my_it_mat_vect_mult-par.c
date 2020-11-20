@@ -63,14 +63,11 @@ int main()
     gen_data(x, n);
   }
 
-  
+    
+    assert(n % comm_sz == 0);
 
     fila = malloc(sizeof(double) * n);
     subtotal = malloc(sizeof(double) * n);
-    
-
-
-    assert(n % comm_sz == 0);
     
     datos = (int)n/comm_sz;
 
@@ -81,9 +78,12 @@ int main()
     MPI_Barrier(MPI_COMM_WORLD);
     mat_vect_mult(fila, x, subtotal, n, iters);
 
-    MPI_Gather(&subtotal, 1, MPI_DOUBLE, y, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
+    MPI_Gather(subtotal, 1, MPI_DOUBLE, y, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+   
+    print_vector("fila", rank,fila, datos);
+   
     print_vector("y", rank,y, n);
+    
     free(A);
     free(x);
     free(y);
