@@ -35,14 +35,15 @@ int main()
   int rank;
 
 
-
+      // Inicio MPI
     MPI_Init(NULL, NULL);
 
-  // SPMD: rank , comm_sz
+  // Inicio la cantidad de procesos y el rank de cada uno
   MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   printf("Número de procesos %d\n", comm_sz);
 
+      // Solo el hilo cero recibe los parametros
   if(rank==0){
       // Obtener las dimensiones
     printf("Ingrese la dimensión n:\n");
@@ -53,7 +54,7 @@ int main()
     scanf("%ld", &seed);
     srand(seed);
 
-    // la matriz A tendrá una representación unidimensional
+    // Separo espacio y genero los valores en el hilo cero
     A = malloc(sizeof(double) * n * n);
     x = malloc(sizeof(double) * n);
     y = malloc(sizeof(double) * n);
@@ -64,30 +65,43 @@ int main()
   }
 
     
+    // Verifico que la cantidad de hilos y la dimensión de la matriz sean compatibles
     assert(n % comm_sz == 0);
 
+    // Creo un vector con cada fila de la matriz que será luego repartida entre los procesos
     fila = malloc(sizeof(double) * n);
+
+    // Creo un vector que almacenará los valores locales de Y en cada proceso
     subtotal = malloc(sizeof(double) * n);
     
+    // Calculo cuantos valores de la matriz serán repartidos entre cada proceso
     datos = n*comm_sz;
 
+    // Reparto A entre todos los procesos
     MPI_Scatter(A, datos, MPI_DOUBLE, fila, datos, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    
+    // Envio x y y a todos los procesos
     MPI_Bcast(x,n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(y,n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
+    // Espero a que todos los procesos lleguen para calcular sus respectivos valores
     MPI_Barrier(MPI_COMM_WORLD);
     mat_vect_mult(fila, x, subtotal, n, iters);
 
+    // Recopilo los valores locales de Y calculados en cada proceso
     MPI_Gather(subtotal, 1, MPI_DOUBLE, y, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
    
+    // Imprimo los valores de A que pertenecen a cada proceso
     print_vector("fila", rank,fila, datos);
    
+    // Imprimo los valores de A que pertenecen a cada proceso
     print_vector("y", rank,y, n);
     
     free(A);
     free(x);
     free(y);
   
+  // Finalizo MPI
     MPI_Finalize();
     return 0;
 }
