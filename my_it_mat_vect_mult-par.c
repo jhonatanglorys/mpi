@@ -104,7 +104,7 @@ int main()
     local_elapsed = local_finish- local_start;
 
     //Calculo el tiempo máximo
-    MPI_Reduce(&local_elapsed,&elapsed, 1, MPI_DOUBLE, MPI_MAX,MPI_COMM_WORLD);
+    MPI_Reduce(&local_elapsed,&elapsed, 1, MPI_DOUBLE, MPI_MAX,0,MPI_COMM_WORLD);
 
     if(rank==0){
       printf("Tiempo de ejecución %5.2f\n", elapsed);
