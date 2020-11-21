@@ -23,6 +23,7 @@ void print_vector(char* name, int rank, double*  z, int m);
 
 int main()
 {
+  double local_start, local_finish, local_elapsed, elapsed;
   double* A = NULL;
   double* x = NULL;
   double* y = NULL;
@@ -65,13 +66,18 @@ int main()
     gen_data(x, n);
   }
 
-    MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&iters, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&seed, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-
     // Verifico que la cantidad de hilos y la dimensión de la matriz sean compatibles
     assert(n % comm_sz == 0);
-    
+
+    // Envio , iters, X y Y a todos los procesos
+    MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&iters, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    /*MPI_Bcast(&seed, 1, MPI_LONG, 0, MPI_COMM_WORLD);*/
+    MPI_Bcast(x,n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(y,n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    local_start = MPI_Wtime();
 
     // Creo un vector con cada segmento de la matriz que será luego repartida entre los procesos
     fila = malloc(sizeof(double) * (n*((int)n/comm_sz)));
@@ -85,9 +91,7 @@ int main()
     // Reparto A entre todos los procesos
     MPI_Scatter(A, datos, MPI_DOUBLE, fila, datos, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     
-    // Envio x y y a todos los procesos
-    MPI_Bcast(x,n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(y,n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    
 
     // cantidad de filas de A que cada proceso usa
     segmentos = (int)n/comm_sz;
@@ -95,6 +99,17 @@ int main()
     // Espero a que todos los procesos lleguen para calcular sus respectivos valores
     MPI_Barrier(MPI_COMM_WORLD);
     mat_vect_mult(fila, x, subtotal, n, iters, segmentos);
+
+    local_finish = MPI_Wtime();
+    local_elapsed = local_finish- local_start;
+
+    //Calculo el tiempo máximo
+    MPI_Reduce(&local_elapsed,&elapsed, 1, MPI_DOUBLE, MPI_MAX,MPI_COMM_WORLD);
+
+    if(rank==0){
+      printf("Tiempo de ejecución %5.2f\n", elapsed);
+    }
+
     // Recopilo los valores locales de Y calculados en cada proceso
     MPI_Gather(subtotal, segmentos, MPI_DOUBLE, y, segmentos, MPI_DOUBLE, 0, MPI_COMM_WORLD);
    
